@@ -1,0 +1,1210 @@
+# Cross-Cluster Live Migration Dashboard (CCLM)
+# Perses PersesDashboard CRD for RHACM
+# Status: DRAFT -- metrics and queries need validation against a live environment
+apiVersion: perses.dev/v1alpha1
+kind: PersesDashboard
+metadata:
+  name: acm-cclm-live-migration
+  namespace: observability-virtualization
+  labels:
+    app.kubernetes.io/name: acm-cclm-live-migration
+    app.kubernetes.io/part-of: acm-observability
+    app.kubernetes.io/component: virtualization
+spec:
+  datasources:
+    prometheus:
+      default: true
+      plugin:
+        kind: PrometheusDatasource
+        spec:
+          proxy:
+            kind: HTTPProxy
+            spec:
+              url: http://rbac-query-proxy:8080
+  duration: 1h
+  refreshInterval: 30s
+
+  variables:
+    - kind: ListVariable
+      spec:
+        name: cluster
+        display:
+          name: Cluster
+          hidden: false
+        allowAllValue: true
+        allowMultiple: true
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus
+            labelName: cluster
+            matchers:
+              - kubevirt_vmi_info
+
+    - kind: ListVariable
+      spec:
+        name: source_cluster
+        display:
+          name: Source Cluster
+          hidden: false
+        allowAllValue: true
+        allowMultiple: false
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus
+            labelName: cluster
+            matchers:
+              - kubevirt_vmi_migration_data_bytes_total
+
+    - kind: ListVariable
+      spec:
+        name: target_cluster
+        display:
+          name: Target Cluster
+          hidden: false
+        allowAllValue: true
+        allowMultiple: false
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus
+            labelName: cluster
+            matchers:
+              - kubevirt_vmi_info
+
+    - kind: ListVariable
+      spec:
+        name: namespace
+        display:
+          name: Namespace
+          hidden: false
+        allowAllValue: true
+        allowMultiple: true
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus
+            labelName: namespace
+            matchers:
+              - kubevirt_vmi_info{cluster=~"$cluster"}
+
+    - kind: ListVariable
+      spec:
+        name: vm_name
+        display:
+          name: VM Name
+          hidden: false
+        allowAllValue: true
+        allowMultiple: true
+        plugin:
+          kind: PrometheusLabelValuesVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus
+            labelName: name
+            matchers:
+              - kubevirt_vmi_info{cluster=~"$cluster", namespace=~"$namespace"}
+
+  panels:
+    # =============================================
+    # Row 1: Migration Fleet Overview
+    # =============================================
+    migrationsActive:
+      spec:
+        display:
+          name: Active Migrations
+          description: Currently running migrations across all clusters
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: decimal
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    sum(kubevirt_vmi_migrations_in_running_phase{cluster=~"$cluster"})
+
+    migrationsPending:
+      spec:
+        display:
+          name: Pending Migrations
+          description: Migrations waiting to start
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: decimal
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    sum(kubevirt_vmi_migrations_in_pending_phase{cluster=~"$cluster"}
+                    + kubevirt_vmi_migrations_in_scheduling_phase{cluster=~"$cluster"})
+
+    migrationsSucceeded24h:
+      spec:
+        display:
+          name: Succeeded (24h)
+          description: Successful migrations in last 24 hours
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: decimal
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    sum(increase(kubevirt_vmi_migration_succeeded{cluster=~"$cluster"}[24h]))
+
+    migrationsFailed24h:
+      spec:
+        display:
+          name: Failed (24h)
+          description: Failed migrations in last 24 hours
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: decimal
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    sum(increase(kubevirt_vmi_migration_failed{cluster=~"$cluster"}[24h]))
+
+    nonEvictableVMs:
+      spec:
+        display:
+          name: Non-Evictable VMs
+          description: VMs with eviction strategy but not migratable
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: decimal
+            sparkline: {}
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    count(kubevirt_vmi_non_evictable{cluster=~"$cluster"} == 1) or vector(0)
+
+    danglingMigrations:
+      spec:
+        display:
+          name: Stuck Migrations (>5min)
+          description: VMs in migrating state for more than 5 minutes
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: decimal
+            sparkline: {}
+            thresholds:
+              defaultColor: "#00FF00"
+              steps:
+                - value: 1
+                  color: "#FF0000"
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    count(
+                      (time() - kubevirt_vm_migrating_status_last_transition_timestamp_seconds{cluster=~"$cluster"}) > 300
+                      and kubevirt_vm_migrating_status_last_transition_timestamp_seconds{cluster=~"$cluster"} > 0
+                    ) or vector(0)
+
+    # =============================================
+    # Row 2: Migration Queue & Rate
+    # =============================================
+    migrationPhaseTimeline:
+      spec:
+        display:
+          name: Migrations by Phase Over Time
+          description: Number of migrations in each phase over time
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migrations_in_pending_phase{cluster=~"$cluster"}
+                  seriesNameFormat: "Pending"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migrations_in_scheduling_phase{cluster=~"$cluster"}
+                  seriesNameFormat: "Scheduling"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migrations_in_running_phase{cluster=~"$cluster"}
+                  seriesNameFormat: "Running"
+
+    migrationRate:
+      spec:
+        display:
+          name: Migration Rate (succeeded/failed per 5m)
+          description: Rate of completed and failed migrations
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    sum by (cluster) (rate(kubevirt_vmi_migration_succeeded{cluster=~"$cluster"}[5m]))
+                  seriesNameFormat: "Succeeded {{cluster}}"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    sum by (cluster) (rate(kubevirt_vmi_migration_failed{cluster=~"$cluster"}[5m]))
+                  seriesNameFormat: "Failed {{cluster}}"
+
+    # =============================================
+    # Row 3: Active Migrations Table
+    # =============================================
+    activeMigrationsTable:
+      spec:
+        display:
+          name: Active Migrations Detail
+          description: Per-VM migration progress, transfer rate, convergence, and estimated time remaining
+        plugin:
+          kind: Table
+          spec:
+            density: compact
+            columnSettings:
+              - name: cluster
+                header: Cluster
+              - name: namespace
+                header: Namespace
+              - name: vmi
+                header: VM Name
+              - name: data_total
+                header: Data Total
+              - name: data_processed
+                header: Data Processed
+              - name: progress_pct
+                header: Progress %
+              - name: transfer_rate
+                header: Transfer Rate
+              - name: dirty_rate
+                header: Dirty Rate
+              - name: convergence
+                header: Convergence Ratio
+              - name: eta_seconds
+                header: ETA (seconds)
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_data_processed_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+                    / kubevirt_vmi_migration_data_bytes_total{cluster=~"$cluster", namespace=~"$namespace"}
+                    * 100
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_dirty_memory_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_data_remaining_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+                    / kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+        transforms:
+          - kind: MergeSeries
+            spec: {}
+          - kind: JoinByColumnValue
+            spec:
+              columns:
+                - vmi
+                - namespace
+                - cluster
+
+    # =============================================
+    # Row 4: Bandwidth & Convergence
+    # =============================================
+    transferRateByVM:
+      spec:
+        display:
+          name: Transfer Rate by VM
+          description: Memory transfer rate per VM (bytes/sec)
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+                  seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
+
+    dirtyRateByVM:
+      spec:
+        display:
+          name: Dirty Rate by VM
+          description: Memory dirty rate per VM (bytes/sec)
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_dirty_memory_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+                  seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
+
+    convergenceRatio:
+      spec:
+        display:
+          name: Convergence Ratio (dirty/transfer)
+          description: "Ratio of dirty rate to transfer rate. Values > 1.0 mean migration will NOT converge."
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            thresholds:
+              steps:
+                - value: 0.5
+                  color: "#00FF00"
+                - value: 0.9
+                  color: "#FFA500"
+                - value: 1.0
+                  color: "#FF0000"
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_dirty_memory_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+                    / kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+                  seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
+
+    migrationProgress:
+      spec:
+        display:
+          name: Migration Progress %
+          description: Percentage of data migrated per VM
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: percent
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_data_processed_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+                    / kubevirt_vmi_migration_data_bytes_total{cluster=~"$cluster", namespace=~"$namespace"}
+                    * 100
+                  seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
+
+    # =============================================
+    # Row 5: Source Cluster Resources
+    # =============================================
+    sourceCPU:
+      spec:
+        display:
+          name: Source Cluster CPU Utilization
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: percent
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    instance:node_cpu_utilisation:rate1m{cluster="$source_cluster"} * 100
+                  seriesNameFormat: "{{instance}}"
+
+    sourceMemory:
+      spec:
+        display:
+          name: Source Cluster Memory Utilization
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: percent
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    instance:node_memory_utilisation:ratio{cluster="$source_cluster"} * 100
+                  seriesNameFormat: "{{instance}}"
+
+    sourceNetwork:
+      spec:
+        display:
+          name: Source Cluster Network TX
+          description: Outbound network bandwidth from source cluster
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    instance:node_network_transmit_bytes_excluding_lo:rate1m{cluster="$source_cluster"}
+                  seriesNameFormat: "{{instance}}"
+
+    sourceStorageIO:
+      spec:
+        display:
+          name: Source Cluster Storage I/O
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    sum by (instance) (
+                      rate(kubevirt_vmi_storage_read_traffic_bytes_total{cluster="$source_cluster"}[5m])
+                      + rate(kubevirt_vmi_storage_write_traffic_bytes_total{cluster="$source_cluster"}[5m])
+                    )
+                  seriesNameFormat: "{{instance}}"
+
+    # =============================================
+    # Row 6: Target Cluster Resources
+    # =============================================
+    targetCPU:
+      spec:
+        display:
+          name: Target Cluster CPU Utilization
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: percent
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    instance:node_cpu_utilisation:rate1m{cluster="$target_cluster"} * 100
+                  seriesNameFormat: "{{instance}}"
+
+    targetMemory:
+      spec:
+        display:
+          name: Target Cluster Memory Utilization
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: percent
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    instance:node_memory_utilisation:ratio{cluster="$target_cluster"} * 100
+                  seriesNameFormat: "{{instance}}"
+
+    targetNetwork:
+      spec:
+        display:
+          name: Target Cluster Network RX
+          description: Inbound network bandwidth to target cluster
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    instance:node_network_receive_bytes_excluding_lo:rate1m{cluster="$target_cluster"}
+                  seriesNameFormat: "{{instance}}"
+
+    targetStorageIO:
+      spec:
+        display:
+          name: Target Cluster Storage I/O
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes/sec
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    sum by (instance) (
+                      rate(kubevirt_vmi_storage_read_traffic_bytes_total{cluster="$target_cluster"}[5m])
+                      + rate(kubevirt_vmi_storage_write_traffic_bytes_total{cluster="$target_cluster"}[5m])
+                    )
+                  seriesNameFormat: "{{instance}}"
+
+    # =============================================
+    # Row 7: Dangling / Pending VMs
+    # =============================================
+    stuckMigrationsTable:
+      spec:
+        display:
+          name: VMs Stuck in Migrating State
+          description: VMs that have been in migrating state longer than expected
+        plugin:
+          kind: Table
+          spec:
+            density: compact
+            columnSettings:
+              - name: cluster
+                header: Cluster
+              - name: namespace
+                header: Namespace
+              - name: name
+                header: VM Name
+              - name: duration_minutes
+                header: Duration (min)
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    (time() - kubevirt_vm_migrating_status_last_transition_timestamp_seconds{cluster=~"$cluster"}) / 60
+                    and kubevirt_vm_migrating_status_last_transition_timestamp_seconds{cluster=~"$cluster"} > 0
+
+    nonEvictableTable:
+      spec:
+        display:
+          name: Non-Evictable VMs
+          description: VMs with Live Migration eviction strategy but not migratable
+        plugin:
+          kind: Table
+          spec:
+            density: compact
+            columnSettings:
+              - name: cluster
+                header: Cluster
+              - name: namespace
+                header: Namespace
+              - name: vmi
+                header: VM Name
+              - name: node
+                header: Node
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_non_evictable{cluster=~"$cluster"} == 1
+
+    errorVMsTable:
+      spec:
+        display:
+          name: VMs in Error State
+          description: VMs currently in error state
+        plugin:
+          kind: Table
+          spec:
+            density: compact
+            columnSettings:
+              - name: cluster
+                header: Cluster
+              - name: namespace
+                header: Namespace
+              - name: name
+                header: VM Name
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vm_error_status_last_transition_timestamp_seconds{cluster=~"$cluster"}
+                    > kubevirt_vm_running_status_last_transition_timestamp_seconds{cluster=~"$cluster"}
+
+    # =============================================
+    # Row 8: Migration History & Duration
+    # =============================================
+    migrationDurationHistory:
+      spec:
+        display:
+          name: Migration Duration History
+          description: Duration of completed migrations over time
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: seconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_end_time_seconds{cluster=~"$cluster"}
+                    - kubevirt_vmi_migration_start_time_seconds{cluster=~"$cluster"}
+                  seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
+
+    estimatedTimeRemaining:
+      spec:
+        display:
+          name: Estimated Time Remaining
+          description: ETA based on current transfer rate and remaining data
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: seconds
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    kubevirt_vmi_migration_data_remaining_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+                    / kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
+                  seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
+
+    bandwidthUtilization:
+      spec:
+        display:
+          name: Migration Bandwidth as % of Node Network
+          description: "Migration bandwidth relative to total node bandwidth. Target: 1-10%."
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: percent
+            thresholds:
+              steps:
+                - value: 10
+                  color: "#FFA500"
+                - value: 25
+                  color: "#FF0000"
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus
+                  query: >-
+                    sum by (cluster) (kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster"})
+                    / sum by (cluster) (instance:node_network_transmit_bytes_excluding_lo:rate1m{cluster=~"$cluster"})
+                    * 100
+                  seriesNameFormat: "{{cluster}}"
+
+  # =============================================
+  # Grid Layout
+  # =============================================
+  layouts:
+    # Row 1: Fleet Overview Stats
+    - kind: Grid
+      spec:
+        display:
+          title: Migration Fleet Overview
+          collapse:
+            open: true
+        items:
+          - x: 0
+            y: 0
+            width: 4
+            height: 3
+            content:
+              $ref: "#/spec/panels/migrationsActive"
+          - x: 4
+            y: 0
+            width: 4
+            height: 3
+            content:
+              $ref: "#/spec/panels/migrationsPending"
+          - x: 8
+            y: 0
+            width: 4
+            height: 3
+            content:
+              $ref: "#/spec/panels/migrationsSucceeded24h"
+          - x: 12
+            y: 0
+            width: 4
+            height: 3
+            content:
+              $ref: "#/spec/panels/migrationsFailed24h"
+          - x: 16
+            y: 0
+            width: 4
+            height: 3
+            content:
+              $ref: "#/spec/panels/nonEvictableVMs"
+          - x: 20
+            y: 0
+            width: 4
+            height: 3
+            content:
+              $ref: "#/spec/panels/danglingMigrations"
+
+    # Row 2: Migration Queue & Rate
+    - kind: Grid
+      spec:
+        display:
+          title: Migration Queue & Rate
+          collapse:
+            open: true
+        items:
+          - x: 0
+            y: 0
+            width: 12
+            height: 6
+            content:
+              $ref: "#/spec/panels/migrationPhaseTimeline"
+          - x: 12
+            y: 0
+            width: 12
+            height: 6
+            content:
+              $ref: "#/spec/panels/migrationRate"
+
+    # Row 3: Active Migrations Table
+    - kind: Grid
+      spec:
+        display:
+          title: Active Migrations Detail
+          collapse:
+            open: true
+        items:
+          - x: 0
+            y: 0
+            width: 24
+            height: 8
+            content:
+              $ref: "#/spec/panels/activeMigrationsTable"
+
+    # Row 4: Bandwidth & Convergence
+    - kind: Grid
+      spec:
+        display:
+          title: Bandwidth & Convergence
+          collapse:
+            open: true
+        items:
+          - x: 0
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/transferRateByVM"
+          - x: 6
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/dirtyRateByVM"
+          - x: 12
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/convergenceRatio"
+          - x: 18
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/migrationProgress"
+
+    # Row 5: Source Cluster Resources
+    - kind: Grid
+      spec:
+        display:
+          title: Source Cluster Resources
+          collapse:
+            open: true
+        items:
+          - x: 0
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/sourceCPU"
+          - x: 6
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/sourceMemory"
+          - x: 12
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/sourceNetwork"
+          - x: 18
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/sourceStorageIO"
+
+    # Row 6: Target Cluster Resources
+    - kind: Grid
+      spec:
+        display:
+          title: Target Cluster Resources
+          collapse:
+            open: true
+        items:
+          - x: 0
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/targetCPU"
+          - x: 6
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/targetMemory"
+          - x: 12
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/targetNetwork"
+          - x: 18
+            y: 0
+            width: 6
+            height: 6
+            content:
+              $ref: "#/spec/panels/targetStorageIO"
+
+    # Row 7: Dangling / Pending VMs
+    - kind: Grid
+      spec:
+        display:
+          title: Dangling / Pending / Error VMs
+          collapse:
+            open: true
+        items:
+          - x: 0
+            y: 0
+            width: 8
+            height: 6
+            content:
+              $ref: "#/spec/panels/stuckMigrationsTable"
+          - x: 8
+            y: 0
+            width: 8
+            height: 6
+            content:
+              $ref: "#/spec/panels/nonEvictableTable"
+          - x: 16
+            y: 0
+            width: 8
+            height: 6
+            content:
+              $ref: "#/spec/panels/errorVMsTable"
+
+    # Row 8: Migration History & Estimation
+    - kind: Grid
+      spec:
+        display:
+          title: Migration History & Estimation
+          collapse:
+            open: true
+        items:
+          - x: 0
+            y: 0
+            width: 8
+            height: 6
+            content:
+              $ref: "#/spec/panels/migrationDurationHistory"
+          - x: 8
+            y: 0
+            width: 8
+            height: 6
+            content:
+              $ref: "#/spec/panels/estimatedTimeRemaining"
+          - x: 16
+            y: 0
+            width: 8
+            height: 6
+            content:
+              $ref: "#/spec/panels/bandwidthUtilization"
