@@ -1126,37 +1126,37 @@ spec:
               width: 4
               height: 3
               content:
-                $ref: "#/spec/config/panels/migrationsActive"
+                $ref: "#/spec/panels/migrationsActive"
             - x: 4
               y: 0
               width: 4
               height: 3
               content:
-                $ref: "#/spec/config/panels/migrationsPending"
+                $ref: "#/spec/panels/migrationsPending"
             - x: 8
               y: 0
               width: 4
               height: 3
               content:
-                $ref: "#/spec/config/panels/migrationsSucceeded24h"
+                $ref: "#/spec/panels/migrationsSucceeded24h"
             - x: 12
               y: 0
               width: 4
               height: 3
               content:
-                $ref: "#/spec/config/panels/migrationsFailed24h"
+                $ref: "#/spec/panels/migrationsFailed24h"
             - x: 16
               y: 0
               width: 4
               height: 3
               content:
-                $ref: "#/spec/config/panels/nonEvictableVMs"
+                $ref: "#/spec/panels/nonEvictableVMs"
             - x: 20
               y: 0
               width: 4
               height: 3
               content:
-                $ref: "#/spec/config/panels/danglingMigrations"
+                $ref: "#/spec/panels/danglingMigrations"
       - kind: Grid
         spec:
           display:
@@ -1169,13 +1169,13 @@ spec:
               width: 12
               height: 6
               content:
-                $ref: "#/spec/config/panels/migrationPhaseTimeline"
+                $ref: "#/spec/panels/migrationPhaseTimeline"
             - x: 12
               y: 0
               width: 12
               height: 6
               content:
-                $ref: "#/spec/config/panels/migrationRate"
+                $ref: "#/spec/panels/migrationRate"
       - kind: Grid
         spec:
           display:
@@ -1188,7 +1188,7 @@ spec:
               width: 24
               height: 8
               content:
-                $ref: "#/spec/config/panels/activeMigrationsTable"
+                $ref: "#/spec/panels/activeMigrationsTable"
       - kind: Grid
         spec:
           display:
@@ -1201,25 +1201,25 @@ spec:
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/transferRateByVM"
+                $ref: "#/spec/panels/transferRateByVM"
             - x: 6
               y: 0
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/dirtyRateByVM"
+                $ref: "#/spec/panels/dirtyRateByVM"
             - x: 12
               y: 0
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/convergenceRatio"
+                $ref: "#/spec/panels/convergenceRatio"
             - x: 18
               y: 0
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/migrationProgress"
+                $ref: "#/spec/panels/migrationProgress"
       - kind: Grid
         spec:
           display:
@@ -1232,25 +1232,25 @@ spec:
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/sourceCPU"
+                $ref: "#/spec/panels/sourceCPU"
             - x: 6
               y: 0
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/sourceMemory"
+                $ref: "#/spec/panels/sourceMemory"
             - x: 12
               y: 0
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/sourceNetwork"
+                $ref: "#/spec/panels/sourceNetwork"
             - x: 18
               y: 0
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/sourceStorageIO"
+                $ref: "#/spec/panels/sourceStorageIO"
       - kind: Grid
         spec:
           display:
@@ -1263,25 +1263,25 @@ spec:
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/targetCPU"
+                $ref: "#/spec/panels/targetCPU"
             - x: 6
               y: 0
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/targetMemory"
+                $ref: "#/spec/panels/targetMemory"
             - x: 12
               y: 0
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/targetNetwork"
+                $ref: "#/spec/panels/targetNetwork"
             - x: 18
               y: 0
               width: 6
               height: 6
               content:
-                $ref: "#/spec/config/panels/targetStorageIO"
+                $ref: "#/spec/panels/targetStorageIO"
       - kind: Grid
         spec:
           display:
@@ -1294,19 +1294,19 @@ spec:
               width: 8
               height: 6
               content:
-                $ref: "#/spec/config/panels/stuckMigrationsTable"
+                $ref: "#/spec/panels/stuckMigrationsTable"
             - x: 8
               y: 0
               width: 8
               height: 6
               content:
-                $ref: "#/spec/config/panels/nonEvictableTable"
+                $ref: "#/spec/panels/nonEvictableTable"
             - x: 16
               y: 0
               width: 8
               height: 6
               content:
-                $ref: "#/spec/config/panels/errorVMsTable"
+                $ref: "#/spec/panels/errorVMsTable"
       - kind: Grid
         spec:
           display:
@@ -1319,19 +1319,19 @@ spec:
               width: 8
               height: 6
               content:
-                $ref: "#/spec/config/panels/migrationDurationHistory"
+                $ref: "#/spec/panels/migrationDurationHistory"
             - x: 8
               y: 0
               width: 8
               height: 6
               content:
-                $ref: "#/spec/config/panels/estimatedTimeRemaining"
+                $ref: "#/spec/panels/estimatedTimeRemaining"
             - x: 16
               y: 0
               width: 8
               height: 6
               content:
-                $ref: "#/spec/config/panels/bandwidthUtilization"
+                $ref: "#/spec/panels/bandwidthUtilization"
       - kind: Grid
         spec:
           display:
@@ -1344,13 +1344,13 @@ spec:
               width: 12
               height: 6
               content:
-                $ref: "#/spec/config/panels/rsClusterCPU"
+                $ref: "#/spec/panels/rsClusterCPU"
             - x: 12
               y: 0
               width: 12
               height: 6
               content:
-                $ref: "#/spec/config/panels/rsClusterMemory"
+                $ref: "#/spec/panels/rsClusterMemory"
       - kind: Grid
         spec:
           display:
@@ -1363,10 +1363,10 @@ spec:
               width: 12
               height: 6
               content:
-                $ref: "#/spec/config/panels/rsNamespaceCPU"
+                $ref: "#/spec/panels/rsNamespaceCPU"
             - x: 12
               y: 0
               width: 12
               height: 6
               content:
-                $ref: "#/spec/config/panels/rsNamespaceMemory"
+                $ref: "#/spec/panels/rsNamespaceMemory"
