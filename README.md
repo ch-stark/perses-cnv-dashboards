@@ -16,7 +16,7 @@ Migrate 8 existing Grafana dashboards from the [multicluster-observability-opera
 | 2 | Single Cluster View | `dash-acm-openshift-virtualization-single-cluster-view.yaml` | Planned |
 | 3 | Single VM View | `dash-acm-openshift-virtualization-single-vm-view.yaml` | Planned |
 | 4 | Virtual Machines Inventory | `dash-acm-virtual-machines-inventory.yaml` | Planned |
-| 5 | Virtual Machines Utilization | `dash-acm-virtual-machines-utilization.yaml` | Planned |
+| 5 | Virtual Machines Utilization | `dash-acm-virtual-machines-utilization.yaml` | Done |
 | 6 | Virtual Machines Service Level | `dash-acm-virtual-machines-service-level.yaml` | Planned |
 | 7 | Virtual Machines by Time in Status | `dash-acm-virtual-machines-by-time-in-status.yaml` | Planned |
 | 8 | Load Aware Rebalancing | `dash-acm-openshift-virtualization-load-aware-rebalancing.yaml` | Planned |
