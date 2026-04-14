@@ -7,16 +7,6 @@ spec:
   config:
     display:
       name: Utilization dashboards / Virtual Machines Resources Utilization
-    datasources:
-      prometheus:
-        default: true
-        plugin:
-          kind: PrometheusDatasource
-          spec:
-            proxy:
-              kind: HTTPProxy
-              spec:
-                url: http://rbac-query-proxy:8080
     duration: 1h
     layouts:
       - kind: Grid
@@ -187,9 +177,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: |-
                       sum by (cluster, namespace, name, status) (
@@ -206,9 +193,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       sum by
@@ -222,9 +206,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       (
@@ -248,9 +229,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       (
@@ -276,9 +254,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       avg by (cluster,namespace,name)
@@ -291,9 +266,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       sum by(cluster, namespace, name)(max by (cluster,
@@ -308,9 +280,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: |-
                       (
@@ -329,9 +298,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       sum by
@@ -347,9 +313,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       sum by (cluster, namespace,
@@ -364,9 +327,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       sum by (cluster,namespace,name)
@@ -381,9 +341,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       sum by (cluster,namespace,name)
@@ -396,9 +353,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       (
@@ -424,9 +378,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       sum by
@@ -439,9 +390,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       sum by (cluster,namespace,name)
@@ -456,9 +404,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       avg by (cluster, namespace, name)
@@ -472,9 +417,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       avg by (cluster, namespace, name)
@@ -488,9 +430,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       topk(1,
@@ -508,9 +447,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     minStep: ''
                     query: >-
                       sum by (cluster, namespace,
@@ -534,9 +470,6 @@ spec:
           plugin:
             kind: PrometheusLabelValuesVariable
             spec:
-              datasource:
-                kind: PrometheusDatasource
-                name: prometheus
               labelName: cluster
               matchers:
                 - kubevirt_vm_info
@@ -556,9 +489,6 @@ spec:
           plugin:
             kind: PrometheusLabelValuesVariable
             spec:
-              datasource:
-                kind: PrometheusDatasource
-                name: prometheus
               labelName: namespace
               matchers:
                 - kubevirt_vm_info{cluster=~"$cluster"}
@@ -578,9 +508,6 @@ spec:
           plugin:
             kind: PrometheusLabelValuesVariable
             spec:
-              datasource:
-                kind: PrometheusDatasource
-                name: prometheus
               labelName: name
               matchers:
                 - kubevirt_vm_info{cluster=~"$cluster", namespace=~"$namespace"}

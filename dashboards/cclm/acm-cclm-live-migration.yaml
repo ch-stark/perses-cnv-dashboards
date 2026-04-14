@@ -11,16 +11,6 @@ spec:
   config:
     display:
       name: ACM CCLM Live Migration
-    datasources:
-      prometheus:
-        default: true
-        plugin:
-          kind: PrometheusDatasource
-          spec:
-            proxy:
-              kind: HTTPProxy
-              spec:
-                url: http://rbac-query-proxy:8080
     duration: 1h
     refreshInterval: 30s
     variables:
@@ -35,9 +25,6 @@ spec:
           plugin:
             kind: PrometheusLabelValuesVariable
             spec:
-              datasource:
-                kind: PrometheusDatasource
-                name: prometheus
               labelName: cluster
               matchers:
                 - kubevirt_vmi_info
@@ -52,9 +39,6 @@ spec:
           plugin:
             kind: PrometheusLabelValuesVariable
             spec:
-              datasource:
-                kind: PrometheusDatasource
-                name: prometheus
               labelName: cluster
               matchers:
                 - kubevirt_vmi_migration_data_bytes_total
@@ -69,9 +53,6 @@ spec:
           plugin:
             kind: PrometheusLabelValuesVariable
             spec:
-              datasource:
-                kind: PrometheusDatasource
-                name: prometheus
               labelName: cluster
               matchers:
                 - kubevirt_vmi_info
@@ -86,9 +67,6 @@ spec:
           plugin:
             kind: PrometheusLabelValuesVariable
             spec:
-              datasource:
-                kind: PrometheusDatasource
-                name: prometheus
               labelName: namespace
               matchers:
                 - 'kubevirt_vmi_info{cluster=~"$cluster"}'
@@ -103,9 +81,6 @@ spec:
           plugin:
             kind: PrometheusLabelValuesVariable
             spec:
-              datasource:
-                kind: PrometheusDatasource
-                name: prometheus
               labelName: name
               matchers:
                 - 'kubevirt_vmi_info{cluster=~"$cluster", namespace=~"$namespace"}'
@@ -128,9 +103,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       sum(kubevirt_vmi_migrations_in_running_phase{cluster=~"$cluster"}) or vector(0)
       migrationsPending:
@@ -151,9 +123,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       sum(kubevirt_vmi_migrations_in_pending_phase{cluster=~"$cluster"} + kubevirt_vmi_migrations_in_scheduling_phase{cluster=~"$cluster"}) or vector(0)
       migrationsSucceeded24h:
@@ -174,9 +143,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       sum(increase(kubevirt_vmi_migration_succeeded{cluster=~"$cluster"}[24h])) or vector(0)
       migrationsFailed24h:
@@ -204,9 +170,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       sum(increase(kubevirt_vmi_migration_failed{cluster=~"$cluster"}[24h])) or vector(0)
       nonEvictableVMs:
@@ -227,9 +190,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       count(kubevirt_vmi_non_evictable{cluster=~"$cluster"} == 1) or vector(0)
       danglingMigrations:
@@ -255,9 +215,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       count( (time() - kubevirt_vm_migrating_status_last_transition_timestamp_seconds{cluster=~"$cluster"}) > 300 and kubevirt_vm_migrating_status_last_transition_timestamp_seconds{cluster=~"$cluster"} > 0 ) or vector(0)
       migrationPhaseTimeline:
@@ -278,9 +235,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migrations_in_pending_phase{cluster=~"$cluster"}
                     seriesNameFormat: "Pending"
@@ -289,9 +243,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migrations_in_scheduling_phase{cluster=~"$cluster"}
                     seriesNameFormat: "Scheduling"
@@ -300,9 +251,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migrations_in_running_phase{cluster=~"$cluster"}
                     seriesNameFormat: "Running"
@@ -324,9 +272,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       sum by (cluster) (rate(kubevirt_vmi_migration_succeeded{cluster=~"$cluster"}[5m]))
                     seriesNameFormat: "Succeeded {{cluster}}"
@@ -335,9 +280,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       sum by (cluster) (rate(kubevirt_vmi_migration_failed{cluster=~"$cluster"}[5m]))
                     seriesNameFormat: "Failed {{cluster}}"
@@ -372,9 +314,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_data_processed_bytes{cluster=~"$cluster", namespace=~"$namespace"} / kubevirt_vmi_migration_data_bytes_total{cluster=~"$cluster", namespace=~"$namespace"} * 100
             - kind: TimeSeriesQuery
@@ -382,9 +321,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_data_remaining_bytes{cluster=~"$cluster", namespace=~"$namespace"}
             - kind: TimeSeriesQuery
@@ -392,9 +328,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
             - kind: TimeSeriesQuery
@@ -402,9 +335,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_dirty_memory_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
             - kind: TimeSeriesQuery
@@ -412,9 +342,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_data_remaining_bytes{cluster=~"$cluster", namespace=~"$namespace"} / kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
       transferRateByVM:
@@ -438,9 +365,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
@@ -465,9 +389,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_dirty_memory_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
@@ -498,9 +419,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_dirty_memory_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"} / kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
@@ -525,9 +443,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_data_processed_bytes{cluster=~"$cluster", namespace=~"$namespace"} / kubevirt_vmi_migration_data_bytes_total{cluster=~"$cluster", namespace=~"$namespace"} * 100
                     seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
@@ -551,9 +466,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       instance:node_cpu_utilisation:rate1m{cluster="$source_cluster"} * 100
                     seriesNameFormat: "{{instance}}"
@@ -577,9 +489,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       instance:node_memory_utilisation:ratio{cluster="$source_cluster"} * 100
                     seriesNameFormat: "{{instance}}"
@@ -604,9 +513,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       instance:node_network_transmit_bytes_excluding_lo:rate1m{cluster="$source_cluster"}
                     seriesNameFormat: "{{instance}}"
@@ -630,9 +536,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       sum by (instance) ( rate(kubevirt_vmi_storage_read_traffic_bytes_total{cluster="$source_cluster"}[5m]) + rate(kubevirt_vmi_storage_write_traffic_bytes_total{cluster="$source_cluster"}[5m]) )
                     seriesNameFormat: "{{instance}}"
@@ -656,9 +559,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       instance:node_cpu_utilisation:rate1m{cluster="$target_cluster"} * 100
                     seriesNameFormat: "{{instance}}"
@@ -682,9 +582,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       instance:node_memory_utilisation:ratio{cluster="$target_cluster"} * 100
                     seriesNameFormat: "{{instance}}"
@@ -709,9 +606,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       instance:node_network_receive_bytes_excluding_lo:rate1m{cluster="$target_cluster"}
                     seriesNameFormat: "{{instance}}"
@@ -735,9 +629,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       sum by (instance) ( rate(kubevirt_vmi_storage_read_traffic_bytes_total{cluster="$target_cluster"}[5m]) + rate(kubevirt_vmi_storage_write_traffic_bytes_total{cluster="$target_cluster"}[5m]) )
                     seriesNameFormat: "{{instance}}"
@@ -766,9 +657,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       (time() - kubevirt_vm_migrating_status_last_transition_timestamp_seconds{cluster=~"$cluster"}) / 60 and kubevirt_vm_migrating_status_last_transition_timestamp_seconds{cluster=~"$cluster"} > 0
       nonEvictableTable:
@@ -796,9 +684,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_non_evictable{cluster=~"$cluster"} == 1
       errorVMsTable:
@@ -824,9 +709,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vm_error_status_last_transition_timestamp_seconds{cluster=~"$cluster"} > kubevirt_vm_running_status_last_transition_timestamp_seconds{cluster=~"$cluster"}
       migrationDurationHistory:
@@ -850,9 +732,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_end_time_seconds{cluster=~"$cluster"} - kubevirt_vmi_migration_start_time_seconds{cluster=~"$cluster"}
                     seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
@@ -877,9 +756,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       kubevirt_vmi_migration_data_remaining_bytes{cluster=~"$cluster", namespace=~"$namespace"} / kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "{{cluster}}/{{namespace}}/{{vmi}}"
@@ -911,9 +787,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       sum by (cluster) (kubevirt_vmi_migration_memory_transfer_rate_bytes{cluster=~"$cluster"}) / sum by (cluster) (instance:node_network_transmit_bytes_excluding_lo:rate1m{cluster=~"$cluster"}) * 100
                     seriesNameFormat: "{{cluster}}"
@@ -938,9 +811,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:cluster:cpu_request{cluster=~"$cluster"}
                     seriesNameFormat: "Request {{cluster}}"
@@ -949,9 +819,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:cluster:cpu_usage{cluster=~"$cluster"}
                     seriesNameFormat: "Usage {{cluster}}"
@@ -960,9 +827,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:cluster:cpu_recommendation{cluster=~"$cluster"}
                     seriesNameFormat: "Recommendation {{cluster}}"
@@ -987,9 +851,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:cluster:memory_request{cluster=~"$cluster"}
                     seriesNameFormat: "Request {{cluster}}"
@@ -998,9 +859,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:cluster:memory_usage{cluster=~"$cluster"}
                     seriesNameFormat: "Usage {{cluster}}"
@@ -1009,9 +867,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:cluster:memory_recommendation{cluster=~"$cluster"}
                     seriesNameFormat: "Recommendation {{cluster}}"
@@ -1036,9 +891,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:namespace:cpu_request{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "Request {{namespace}}"
@@ -1047,9 +899,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:namespace:cpu_usage{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "Usage {{namespace}}"
@@ -1058,9 +907,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:namespace:cpu_recommendation{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "Recommendation {{namespace}}"
@@ -1085,9 +931,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:namespace:memory_request{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "Request {{namespace}}"
@@ -1096,9 +939,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:namespace:memory_usage{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "Usage {{namespace}}"
@@ -1107,9 +947,6 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    datasource:
-                      kind: PrometheusDatasource
-                      name: prometheus
                     query: >-
                       acm_rs_vm:namespace:memory_recommendation{cluster=~"$cluster", namespace=~"$namespace"}
                     seriesNameFormat: "Recommendation {{namespace}}"
