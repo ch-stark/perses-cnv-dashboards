@@ -7,6 +7,16 @@ spec:
   config:
     display:
       name: Utilization dashboards / Virtual Machines Resources Utilization
+    datasources:
+      prometheus:
+        default: true
+        plugin:
+          kind: PrometheusDatasource
+          spec:
+            proxy:
+              kind: HTTPProxy
+              spec:
+                url: http://rbac-query-proxy.open-cluster-management-observability.svc.cluster.local:8080
     duration: 1h
     layouts:
       - kind: Grid
