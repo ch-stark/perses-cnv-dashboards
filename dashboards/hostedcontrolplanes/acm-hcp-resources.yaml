@@ -1,0 +1,339 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: acm-hcp-resources
+  namespace: observability-hosted-control-plane
+  labels:
+    app.kubernetes.io/name: acm-hcp-resources
+    app.kubernetes.io/part-of: acm-observability
+    app.kubernetes.io/component: hosted-control-plane
+spec:
+  config:
+    display:
+      name: ACM - Resources - Hosted Control Plane
+    datasources:
+      prometheus:
+        default: true
+        plugin:
+          kind: PrometheusDatasource
+          spec:
+            proxy:
+              kind: HTTPProxy
+              spec:
+                url: http://rbac-query-proxy.open-cluster-management-observability.svc.cluster.local:8080
+    duration: 1h
+    refreshInterval: 30s
+    variables:
+      - kind: ListVariable
+        spec:
+          name: hcp_ns
+          display:
+            name: HCP Namespace
+            hidden: false
+          allowAllValue: false
+          allowMultiple: false
+          plugin:
+            kind: PrometheusLabelValuesVariable
+            spec:
+              labelName: hcp_namespace
+              matchers:
+                - mce_hs_addon_hosted_control_planes_status_gauge
+    panels:
+      hcpPodCount:
+        kind: Panel
+        spec:
+          display:
+            name: Number of pods
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last-number
+              sparkline: {}
+              thresholds:
+                steps:
+                  - value: 0
+                    color: "#73bf69"
+                  - value: 80
+                    color: "#f2495c"
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum(kube_pod_info{namespace="$hcp_ns"})
+      hcpCPUUsageGraph:
+        kind: Panel
+        spec:
+          display:
+            name: CPU usage
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              visual:
+                areaOpacity: 0.8
+                display: line
+                lineWidth: 0.25
+                stack: all
+              legend:
+                position: bottom
+                mode: list
+              yAxis:
+                format:
+                  unit: decimal
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum by (pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate5m{namespace="$hcp_ns"})
+                    seriesNameFormat: "{{pod}}"
+      hcpCPURequestsPercent:
+        kind: Panel
+        spec:
+          display:
+            name: CPU Requests %
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last-number
+              format:
+                unit: percent-decimal
+              sparkline: {}
+              thresholds:
+                steps:
+                  - value: 0
+                    color: "#73bf69"
+                  - value: 80
+                    color: "#f2495c"
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum by (namespace) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum{namespace="$hcp_ns"})
+                      /
+                      sum by (namespace) (kube_pod_container_resource_requests{resource="cpu", namespace="$hcp_ns"})
+      hcpCPURequests:
+        kind: Panel
+        spec:
+          display:
+            name: CPU Requests
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last-number
+              sparkline: {}
+              thresholds:
+                steps:
+                  - value: 0
+                    color: "#73bf69"
+                  - value: 80
+                    color: "#f2495c"
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum(kube_pod_container_resource_requests{namespace="$hcp_ns", resource="cpu"})
+      hcpCPUUsage:
+        kind: Panel
+        spec:
+          display:
+            name: CPU Usage
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last-number
+              sparkline: {}
+              thresholds:
+                steps:
+                  - value: 0
+                    color: "#73bf69"
+                  - value: 80
+                    color: "#f2495c"
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      node_namespace_pod_container:container_cpu_usage_seconds_total:sum{namespace="$hcp_ns"}
+      hcpMemoryRequestsPercent:
+        kind: Panel
+        spec:
+          display:
+            name: Memory Requests %
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last-number
+              format:
+                unit: percent-decimal
+              sparkline: {}
+              thresholds:
+                steps:
+                  - value: 0
+                    color: "#73bf69"
+                  - value: 80
+                    color: "#f2495c"
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum by (namespace) (container_memory_rss{namespace="$hcp_ns", container!=""})
+                      /
+                      sum by (namespace) (kube_pod_container_resource_requests{namespace="$hcp_ns", resource="memory"})
+      hcpMemoryUsageGraph:
+        kind: Panel
+        spec:
+          display:
+            name: Memory Usage (w/o cache)
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              visual:
+                areaOpacity: 0.8
+                display: line
+                lineWidth: 0.25
+                stack: all
+              legend:
+                position: bottom
+                mode: list
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum by (pod) (container_memory_rss{job="kubelet", namespace=~"$hcp_ns"})
+                    seriesNameFormat: "{{pod}}"
+      hcpMemoryRequests:
+        kind: Panel
+        spec:
+          display:
+            name: Memory Requests
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last-number
+              format:
+                unit: bytes
+              sparkline: {}
+              thresholds:
+                steps:
+                  - value: 0
+                    color: "#73bf69"
+                  - value: 80
+                    color: "#f2495c"
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum(kube_pod_container_resource_requests{namespace="$hcp_ns", resource="memory"})
+      hcpMemoryUsage:
+        kind: Panel
+        spec:
+          display:
+            name: Memory Usage
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last-number
+              format:
+                unit: decimal-bytes
+              sparkline: {}
+              thresholds:
+                steps:
+                  - value: 0
+                    color: "#73bf69"
+                  - value: 80
+                    color: "#f2495c"
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum(container_memory_rss{namespace="$hcp_ns", container!=""})
+    layouts:
+      - kind: Grid
+        spec:
+          display:
+            title: HCP Resource Utilization
+            collapse:
+              open: true
+          items:
+            - x: 0
+              y: 0
+              width: 3
+              height: 4
+              content:
+                $ref: "#/spec/panels/hcpPodCount"
+            - x: 3
+              y: 0
+              width: 21
+              height: 16
+              content:
+                $ref: "#/spec/panels/hcpCPUUsageGraph"
+            - x: 0
+              y: 4
+              width: 3
+              height: 4
+              content:
+                $ref: "#/spec/panels/hcpCPURequestsPercent"
+            - x: 0
+              y: 8
+              width: 3
+              height: 4
+              content:
+                $ref: "#/spec/panels/hcpCPURequests"
+            - x: 0
+              y: 12
+              width: 3
+              height: 4
+              content:
+                $ref: "#/spec/panels/hcpCPUUsage"
+            - x: 0
+              y: 16
+              width: 3
+              height: 4
+              content:
+                $ref: "#/spec/panels/hcpMemoryRequestsPercent"
+            - x: 3
+              y: 16
+              width: 21
+              height: 14
+              content:
+                $ref: "#/spec/panels/hcpMemoryUsageGraph"
+            - x: 0
+              y: 20
+              width: 3
+              height: 5
+              content:
+                $ref: "#/spec/panels/hcpMemoryRequests"
+            - x: 0
+              y: 25
+              width: 3
+              height: 5
+              content:
+                $ref: "#/spec/panels/hcpMemoryUsage"

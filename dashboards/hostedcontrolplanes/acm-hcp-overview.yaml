@@ -1,0 +1,408 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: acm-hcp-overview
+  namespace: observability-hosted-control-plane
+  labels:
+    app.kubernetes.io/name: acm-hcp-overview
+    app.kubernetes.io/part-of: acm-observability
+    app.kubernetes.io/component: hosted-control-plane
+spec:
+  config:
+    display:
+      name: ACM - Hosted Control Planes Overview
+    datasources:
+      prometheus:
+        default: true
+        plugin:
+          kind: PrometheusDatasource
+          spec:
+            proxy:
+              kind: HTTPProxy
+              spec:
+                url: http://rbac-query-proxy.open-cluster-management-observability.svc.cluster.local:8080
+    duration: 1h
+    refreshInterval: 30s
+    variables: []
+    panels:
+      requestBasedLimitEstimation:
+        kind: Panel
+        spec:
+          display:
+            name: " Resource Request-base Limit Estimation"
+          plugin:
+            kind: Markdown
+            spec:
+              text: |
+                ## Request-based resource limit
+
+                To understand the request-based resource limit, consider the total request value of a hosted control plane. To calculate that value, add the request values of all highly available hosted control plane pods across the namespace. The estimates are calculated based on the following resource request samples:
+
+                * 78 pods
+                * Five vCPU requests for each highly available hosted control plane
+                * 18 GiB memory requests for each highly available hosted control plane
+      workerNodeCapacities:
+        kind: Panel
+        spec:
+          display:
+            name: Worker Nodes Capacities
+            description: These are the worker nodes that can run hosted control planes.
+          plugin:
+            kind: Table
+            spec:
+              density: compact
+              columnSettings:
+                - name: timestamp
+                  hide: true
+                - name: __name__
+                  hide: true
+                - name: cluster
+                  hide: true
+                - name: clusterID
+                  hide: true
+                - name: container
+                  hide: true
+                - name: node
+                  header: Worker Node
+                - name: cpu
+                  header: CPU
+                - name: memory
+                  header: Memory (GiB)
+                - name: endpoint
+                  hide: true
+                - name: instance
+                  hide: true
+                - name: job
+                  hide: true
+                - name: maxPods
+                  header: Pod Limit
+                - name: namespace
+                  hide: true
+                - name: pod
+                  hide: true
+                - name: receive
+                  hide: true
+                - name: service
+                  hide: true
+                - name: tenant_id
+                  hide: true
+                - name: value
+                  hide: true
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      mce_hs_addon_worker_node_resource_capacities_gauge
+      numberOfHCPsRequestBased:
+        kind: Panel
+        spec:
+          display:
+            name: Number of HCPs
+            description: >-
+              This panel displays the current number of unavailable/failing and available hosted control planes.
+              Based on the hosted control plane resource requirements, it also displays the estimated maximum
+              number of hosted control planes that can be hosted in this cluster.
+          plugin:
+            kind: BarChart
+            spec:
+              calculation: last-number
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum(mce_hs_addon_hosted_control_planes_status_gauge{ready="false"})
+                    seriesNameFormat: "Currently Unavailable"
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum(mce_hs_addon_hosted_control_planes_status_gauge{ready="true"})
+                    seriesNameFormat: "Currently Available"
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      mce_hs_addon_request_based_hcp_capacity_gauge
+                    seriesNameFormat: "est. Max"
+      loadBasedLimitEstimation:
+        kind: Panel
+        spec:
+          display:
+            name: Load-based Limit Estimation
+          plugin:
+            kind: Markdown
+            spec:
+              text: |
+                ## Load-based limit
+
+                Request-based sizing provides a maximum number of hosted control planes that can run based on the minimum request totals for the `Burstable` class, which meet the average resource usage. For sizing guidance that is tuned to higher levels of hosted cluster load, the load-based approach demonstrates resource usage at increasing API rates. The load-based approach builds in resource capacity for each hosted control plane to handle higher API load points.
+
+                Resource utilization is measured as the workload increased to the total namespace count. This data provides an estimation factor to increase the compute resource capacity based on the expected API load. Exact utilization rates can vary based on the type and pace of the cluster workload.
+
+                | **Hosted control plane resource utilization scaling** | **vCPUs** | **Memory (GiB)** |
+                | --- | --- | --- |
+                | Default requests | 5 | 18 |
+                | Usage when idle | 2.9 | 11.1 |
+                | Incremental usage per 1000 increase in API rate | 9.0 | 2.5 |
+
+                By using these examples, you can factor in a load-based limit that is based on the expected rate of stress on the API, which is measured as the aggregated QPS across the 3 hosted API servers. For general sizing purposes, consider a 1000 QPS API rate to be a medium hosted cluster load and a 2000 QPS API to be a heavy hosted cluster load.
+      qpsSettings:
+        kind: Panel
+        spec:
+          display:
+            name: QPS Settings
+            description: >-
+              These API server loads are used for estimating the maximum number of hosted control planes
+              that can be hosted. For example, the est. Max. (low QPS) in the panel below is the estimate
+              maximum number of hosted control planes that can be hosted when all hosted control planes put
+              low load on the API server.
+          plugin:
+            kind: Table
+            spec:
+              density: compact
+              columnSettings:
+                - name: timestamp
+                  hide: true
+                - name: __name__
+                  hide: true
+                - name: cluster
+                  hide: true
+                - name: clusterID
+                  hide: true
+                - name: container
+                  hide: true
+                - name: endpoint
+                  hide: true
+                - name: instance
+                  hide: true
+                - name: job
+                  hide: true
+                - name: namespace
+                  hide: true
+                - name: pod
+                  hide: true
+                - name: receive
+                  hide: true
+                - name: service
+                  hide: true
+                - name: tenant_id
+                  hide: true
+                - name: value
+                  header: Query Rate (QPS)
+                - name: rate
+                  header: Load on API Server
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      mce_hs_addon_qps_gauge
+      numberOfHCPsQPSBased:
+        kind: Panel
+        spec:
+          display:
+            name: "Number of HCPs "
+            description: >-
+              This panel displays the current number of unavailable/failing and available hosted control planes.
+              Based on various loads, it also displays the estimated maximum number of hosted control planes
+              that can be hosted in this cluster.
+          plugin:
+            kind: BarChart
+            spec:
+              calculation: last-number
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum(mce_hs_addon_hosted_control_planes_status_gauge{ready="false"})
+                    seriesNameFormat: "Currently Unavailable"
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      sum(mce_hs_addon_hosted_control_planes_status_gauge{ready="true"})
+                    seriesNameFormat: "Currently Available"
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      mce_hs_addon_qps_based_hcp_capacity_gauge{qps_rate="low"}
+                    seriesNameFormat: "est. Max. (low QPS)"
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      mce_hs_addon_qps_based_hcp_capacity_gauge{qps_rate="medium"}
+                    seriesNameFormat: "est. Max. (medium QPS)"
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      mce_hs_addon_qps_based_hcp_capacity_gauge{qps_rate="high"}
+                    seriesNameFormat: "est. Max. (high QPS)"
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      mce_hs_addon_qps_based_hcp_capacity_gauge{qps_rate="average"}
+                    seriesNameFormat: "est. Max. (avg QPS)"
+      hcpList:
+        kind: Panel
+        spec:
+          display:
+            name: Hosted Control Plane List
+            description: >-
+              This is the list of all hosted control planes in this cluster.
+              Click on the hosted control plane name to see its resource utilization.
+          plugin:
+            kind: Table
+            spec:
+              density: compact
+              cellSettings:
+                - condition:
+                    kind: Value
+                    spec:
+                      value: "false"
+                  backgroundColor: "#ff9830"
+                  text: Not ready
+                - condition:
+                    kind: Value
+                    spec:
+                      value: "true"
+                  text: Ready
+              columnSettings:
+                - name: hcp_name
+                  header: HCP name
+                - name: timestamp
+                  hide: true
+                - name: value
+                  hide: true
+                - name: "Value #A"
+                  hide: true
+                - name: __name__
+                  hide: true
+                - name: cluster
+                  hide: true
+                - name: clusterID
+                  hide: true
+                - name: container
+                  hide: true
+                - name: endpoint
+                  hide: true
+                - name: instance
+                  hide: true
+                - name: job
+                  hide: true
+                - name: namespace
+                  hide: true
+                - name: pod
+                  hide: true
+                - name: receive
+                  hide: true
+                - name: service
+                  hide: true
+                - name: tenant_id
+                  hide: true
+                - name: hcp_namespace
+                  header: HCP namespace
+                - name: ready
+                  header: Status
+                - name: version
+                  header: Version
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: >-
+                      mce_hs_addon_hosted_control_planes_status_gauge
+    layouts:
+      - kind: Grid
+        spec:
+          display:
+            title: Estimated capacity based on HCP resource requests
+            collapse:
+              open: true
+          items:
+            - x: 0
+              y: 0
+              width: 12
+              height: 12
+              content:
+                $ref: "#/spec/panels/requestBasedLimitEstimation"
+            - x: 12
+              y: 0
+              width: 12
+              height: 7
+              content:
+                $ref: "#/spec/panels/workerNodeCapacities"
+            - x: 12
+              y: 7
+              width: 12
+              height: 5
+              content:
+                $ref: "#/spec/panels/numberOfHCPsRequestBased"
+      - kind: Grid
+        spec:
+          display:
+            title: Estimated capacity based on API server query (QPS)
+            collapse:
+              open: true
+          items:
+            - x: 0
+              y: 0
+              width: 12
+              height: 14
+              content:
+                $ref: "#/spec/panels/loadBasedLimitEstimation"
+            - x: 12
+              y: 0
+              width: 12
+              height: 6
+              content:
+                $ref: "#/spec/panels/qpsSettings"
+            - x: 12
+              y: 6
+              width: 12
+              height: 8
+              content:
+                $ref: "#/spec/panels/numberOfHCPsQPSBased"
+      - kind: Grid
+        spec:
+          display:
+            title: Hosted Control Planes List
+            collapse:
+              open: true
+          items:
+            - x: 0
+              y: 0
+              width: 24
+              height: 7
+              content:
+                $ref: "#/spec/panels/hcpList"
