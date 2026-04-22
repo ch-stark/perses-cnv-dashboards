@@ -52,6 +52,40 @@ stolostron/multicluster-observability-operator
   operators/multiclusterobservability/manifests/base/perses/virtualization/
 ```
 
+
+Here is the YAML to create a PersesGlobalDatasource for your multi-cluster rbac-query-proxy Prometheus endpoint:
+apiVersion: perses.dev/v1alpha2
+
+
+kind: PersesGlobalDatasource
+metadata:
+  name: rbac-query-proxy-global-datasource
+  labels:
+    app.kubernetes.io/name: rbac-query-proxy-global-datasource
+    app.kubernetes.io/part-of: acm-observability
+spec:
+  config:
+    display:
+      name: ACM RBAC Query Proxy (Global)
+    default: true
+    plugin:
+      kind: PrometheusDatasource
+      spec:
+        proxy:
+          kind: HTTPProxy
+          spec:
+            url: >-
+              http://rbac-query-proxy.open-cluster-management-observability.svc.cluster.local:8080
+
+How to use it:
+Save the YAML above to a file named global-datasource.yaml.
+Apply it to your cluster using the OpenShift CLI:
+Once applied, any PersesDashboard in any project across your cluster will be able to query this data source by referencing name: rbac-query-proxy-global-datasource under its queries
+.
+
+
+
+
 ## Deployment
 
 Dashboards are deployed as `PersesDashboard` Custom Resources in the `observability-virtualization` namespace, using `rbac-query-proxy` (HTTP:8080) as the Prometheus datasource.
